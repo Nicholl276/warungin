@@ -1,0 +1,31 @@
+<?php
+require __DIR__ . '/config.php';
+$stmt = db()->query("SELECT id, name, category, description, price, available, TO_BASE64(image) as img_base64 FROM menu_items WHERE available=1 ORDER BY category, name");
+$menus = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$categories = array_values(array_unique(array_column($menus, 'category')));
+?>
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title><?=e(APP_NAME)?> — Menu Digital</title><link rel="stylesheet" href="assets/style.css"></head>
+<body class="customer-page">
+<div id="welcome-loader" class="loader-screen"><div class="loader-mark"><i data-lucide="chef-hat"></i></div><div class="loader-brand">WARUNGIN</div><div class="loader-copy">Menyiapkan menu warung...</div><div class="loader-track"><span></span></div></div>
+<header class="customer-header"><a class="brand" href="index.php"><span class="brand-icon"><i data-lucide="chef-hat"></i></span><span><b>WARUNGIN</b><small>Menu digital UMKM</small></span></a></header>
+<main class="customer-wrap">
+<section class="hero"><div class="hero-copy"><span class="eyebrow"><i data-lucide="store"></i> <?=e(APP_NAME)?> · UNISSULA</span><h1>Lapar? Pilih menu,<br><em>pesan lebih praktis.</em></h1><p>Scan QR, pilih menu favorit, lalu kirim pesanan. Nggak perlu antre untuk tanya menu.</p><div class="hero-tags"><span><i data-lucide="qr-code"></i> Scan & pesan</span><span><i data-lucide="clock-3"></i> Cepat dan mudah</span></div></div><div class="hero-art"><div class="art-circle"></div><div class="art-card"><i data-lucide="utensils"></i><strong>Menu hari ini</strong><span>Hangat, praktis, dekat.</span><div class="art-lines"><b></b><b></b><b></b></div></div></div></section>
+<section class="menu-section"><div class="section-head"><div><span class="eyebrow">PILIH FAVORITMU</span><h2>Menu warung</h2><p>Harga dan ketersediaan ditampilkan oleh penjual.</p></div><div class="search-box"><i data-lucide="search"></i><input id="search" placeholder="Cari menu..." aria-label="Cari menu"></div></div>
+<div class="category-list"><button class="category active" data-category="Semua">Semua menu</button><?php foreach($categories as $cat): ?><button class="category" data-category="<?=e($cat)?>"><?=e($cat)?></button><?php endforeach; ?></div>
+<div class="menu-grid" id="menu-grid"><?php foreach($menus as $m): ?><article class="menu-card" data-name="<?=e(strtolower($m['name'].' '.$m['description']))?>" data-category="<?=e($m['category'])?>">
+<div class="menu-photo">
+    <?php if (!empty($m['img_base64'])): ?>
+        <img src="data:image/jpeg;base64,<?=$m['img_base64']?>" alt="<?=e($m['name'])?>" class="menu-img">
+    <?php else: ?>
+        <span class="photo-placeholder"><i data-lucide="<?= $m['category']==='Minuman'?'coffee':($m['category']==='Mi Instan'?'soup':'utensils') ?>"></i></span>
+    <?php endif; ?>
+    <span class="available"><i data-lucide="check-circle-2"></i> Tersedia</span>
+</div>
+<div class="menu-info"><span class="menu-category"><?=e($m['category'])?></span><h3><?=e($m['name'])?></h3><p><?=e($m['description'])?></p><div class="menu-bottom"><strong>Rp <?=number_format((int)$m['price'],0,',','.')?></strong><button class="add-button" data-id="<?=$m['id']?>" data-name="<?=e($m['name'])?>" data-price="<?=$m['price']?>"><i data-lucide="plus"></i> Tambah</button></div></div></article><?php endforeach; ?></div>
+<div id="empty-state" class="empty-state" hidden><i data-lucide="search-x"></i><p>Menu tidak ditemukan.</p></div></section>
+</main>
+<button class="cart-fab" id="open-cart"><i data-lucide="shopping-bag"></i><span>Lihat pesanan</span><b id="cart-count">0</b><strong id="cart-total">Rp 0</strong></button>
+<div class="modal-backdrop" id="cart-modal" hidden><section class="modal cart-modal"><div class="modal-head"><div><span class="eyebrow">RINGKASAN</span><h2>Pesanan kamu</h2></div><button class="icon-button" data-close="cart-modal" aria-label="Tutup"><i data-lucide="x"></i></button></div><div id="cart-lines" class="cart-lines"><div class="empty-cart">Belum ada menu. Yuk pilih dulu!</div></div><div class="cart-total-row"><span>Total</span><strong id="modal-total">Rp 0</strong></div><form id="checkout-form"><label>Nama pemesan<input name="customer_name" required maxlength="120" placeholder="Nama kamu"></label><div class="form-two"><label>Jenis pesanan<select name="order_type"><option>Dine-in</option><option>Antar Kampus</option></select></label><label>Meja / lokasi<input name="table_label" placeholder="Contoh: Meja 04 / FK"></label></div><label>Catatan pesanan<textarea name="notes" placeholder="Contoh: tidak pedas, es dipisah"></textarea></label><label>Metode pembayaran<select name="payment_method"><option value="QRIS">QRIS</option><option value="Tunai">Tunai</option></select></label><button class="primary-button full" type="submit"><i data-lucide="arrow-right"></i> Lanjutkan pesanan</button><p class="form-note">Pesanan baru akan dikirim setelah kamu mengonfirmasi detailnya.</p></form></section></div>
+<div class="modal-backdrop" id="payment-modal" hidden><section class="modal payment-payment"><button class="icon-button close-payment" data-close="payment-modal" aria-label="Tutup"><i data-lucide="x"></i></button><div class="success-mark"><i data-lucide="check"></i></div><span class="eyebrow">PESANAN DIBUAT</span><h2 id="payment-title">Pesanan siap dikirim</h2><p id="order-code" class="order-code"></p><div id="qris-area" class="qris-area"><p>Scan QRIS resmi milik warung melalui aplikasi pembayaran kamu.</p><img src="assets/img/qris.png" alt="QRIS warung"><p class="payment-warning"><i data-lucide="info"></i> Prototype: ganti gambar ini dengan QRIS resmi penjual. Status pembayaran diverifikasi oleh admin.</p></div><div class="payment-summary"><span>Total pesanan</span><strong id="payment-total">Rp 0</strong></div><button id="send-whatsapp" class="primary-button full"><i data-lucide="message-circle"></i> Kirim detail ke WhatsApp</button><button id="done-payment" class="secondary-button full">Selesai</button></section></div>
+<script>window.WARUNGIN={whatsapp:<?=json_encode(WHATSAPP_NUMBER)?>,demo:<?=DEMO_MODE?'true':'false'?>};</script><script src="https://unpkg.com/lucide@latest"></script><script src="assets/customer.js"></script></body></html>
